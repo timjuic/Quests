@@ -85,6 +85,7 @@ options:
     quest-start: "ENTITY_PLAYER_LEVELUP:2:3"
     quest-cancel: "UI_TOAST_OUT:2:3"
     quest-complete: "UI_TOAST_CHALLENGE_COMPLETE:1.25:3"
+    reward-claim: "ENTITY_EXPERIENCE_ORB_PICKUP:1.5:2"
     gui:
       open: "ITEM_BOOK_PAGE_TURN:1:3"
       interact: ""
@@ -244,6 +245,93 @@ options:
 quest-mode:
   mode: "NORMAL" # More modes are a work in progress
 
+# -----------------------------------------------------------
+#  Battle pass
+#  -----------
+#
+#  When enabled, quests with `options.tier: <n>` (n >= 1) become battle pass
+#  quests. Their rewards are deferred until manually claimed via the battle
+#  pass GUI (/quests battlepass), and they are organized into tiers — each
+#  tier unlocks once the previous tier's quests are all completed.
+#
+#  Per-quest config additions (in your quest YAML files):
+#    options:
+#      tier: 1                  # 0 = legacy quest (immediate rewards), 1+ = battle pass tier
+#    premium-rewards:           # claimable only by players with the premium permission
+#      - "give %player% diamond 3"
+#    premium-rewardstring:
+#      - "&dYou received: &f3 diamonds"
+#    premium-vaultreward: "500"
+# -----------------------------------------------------------
+battle-pass:
+  enabled: false
+  # Players with this permission can claim premium rewards.
+  premium-permission: "quests.premium"
+  # Number of quests displayed per tier row. The GUI is built around 7.
+  quests-per-tier: 7
+  gui:
+    title: "&8Battle Pass — Tier {tier}"
+    # Optional: define your own ItemStack for nav buttons. If omitted, sensible defaults are used.
+    #prev-tier-button:
+    #  type: "ARROW"
+    #  name: "&aPrevious Tier &7({tier})"
+    #  lore:
+    #    - "&7Go to tier &c{tier}&7."
+    #next-tier-button:
+    #  type: "ARROW"
+    #  name: "&aNext Tier &7({tier})"
+    #  lore:
+    #    - "&7Go to tier &c{tier}&7."
+    #premium-active:
+    #  type: "NETHER_STAR"
+    #  name: "&d&lPremium Active"
+    #  lore:
+    #    - "&7You have the premium battle pass."
+    #premium-inactive:
+    #  type: "PAPER"
+    #  name: "&7&lFree Battle Pass"
+    #  lore:
+    #    - "&7Buy premium to unlock extra rewards."
+  # Per-quest tile state items. Defined for each state the tile can be in.
+  # If a state is omitted, a sensible fallback item is used.
+  #tile-states:
+  #  tier-locked:
+  #    type: "BARRIER"
+  #    name: "&c&lTier Locked"
+  #    lore:
+  #      - "&7Complete the previous tier first."
+  #  not-started:
+  #    type: "BOOK"
+  #    name: "&e&lAvailable — {questcolored}"
+  #    lore:
+  #      - "&7Click to start this quest."
+  #  in-progress:
+  #    type: "WRITABLE_BOOK"
+  #    name: "&e&lIn Progress — {questcolored}"
+  #    lore:
+  #      - "&7You're working on this quest."
+  #  claimable-free:
+  #    type: "CHEST"
+  #    name: "&a&lClaim — {questcolored}"
+  #    lore:
+  #      - "&7Click to claim the free reward."
+  #  claimable-premium:
+  #    type: "ENDER_CHEST"
+  #    name: "&d&lClaim Premium — {questcolored}"
+  #    lore:
+  #      - "&7Click to claim the premium reward."
+  #  premium-locked:
+  #    type: "IRON_BARS"
+  #    name: "&8&lPremium Locked — {questcolored}"
+  #    lore:
+  #      - "&7Buy the premium battle pass"
+  #      - "&7to claim this reward."
+  #  fully-claimed:
+  #    type: "LIME_DYE"
+  #    name: "&a&lClaimed — {questcolored}"
+  #    lore:
+  #      - "&7All rewards have been claimed."
+
 # Most common locales:
 # de-DE: 1.234,56
 # en-US: 1,234.56
@@ -378,6 +466,36 @@ gui:
       - "&7(&a{quest}&7) and cannot."
       - "&7repeat it."
     type: "GREEN_STAINED_GLASS_PANE"
+  # Battle pass: tile shown when a completed quest still has a free reward to claim. The lore
+  # supports placeholders: {questcolored}, {questid}, {free-status}, {premium-status}, and the
+  # multi-line placeholders {free-rewards} / {premium-rewards} which expand to the quest's
+  # `rewardstring` / `premium-rewardstring` lines (one lore entry per line).
+  quest-claim-free-display:
+    name: "&a&lClaim Reward"
+    lore:
+      - "&7Quest: &f{questcolored}"
+      - ""
+      - "&aFree reward &7({free-status}&7):"
+      - "{free-rewards}"
+      - ""
+      - "&dPremium reward &7({premium-status}&7):"
+      - "{premium-rewards}"
+      - ""
+      - "&eClick to claim!"
+    type: "CHEST"
+  quest-claim-premium-display:
+    name: "&d&lClaim Premium Reward"
+    lore:
+      - "&7Quest: &f{questcolored}"
+      - ""
+      - "&aFree reward &7({free-status}&7):"
+      - "{free-rewards}"
+      - ""
+      - "&dPremium reward &7({premium-status}&7):"
+      - "{premium-rewards}"
+      - ""
+      - "&eClick to claim!"
+    type: "ENDER_CHEST"
   no-started-quests:
     name: "&c&lNo Started Quests"
     lore:
@@ -492,6 +610,14 @@ messages:
   quest-category-quest-permission: "&7You do not have permission to start this quest since it is in a category you do not have permission to view."
   quest-cancel-notstarted: "&7You have not started this quest."
   quest-cancel-notcancellable: "&7You cannot cancel this quest."
+  battlepass-rewards-pending: "&7Quest &c{quest} &7complete! Open the battle pass to claim your rewards."
+  battlepass-claim-free: "&7You claimed the free reward for &c{quest}&7."
+  battlepass-claim-premium: "&7You claimed the premium reward for &c{quest}&7."
+  battlepass-claim-both: "&7You claimed the free and premium reward for &c{quest}&7."
+  battlepass-claim-need-premium: "&7Buy the premium battle pass to claim this reward."
+  battlepass-tier-locked: "&7Complete all quests in the previous tier to unlock tier &c{tier}&7."
+  command-battlepass-disabled: "&7The battle pass is not enabled on this server."
+  command-battlepass-no-quests: "&7No battle pass quests are configured yet."
   quest-updater: "&cQuests > &7A new version &c{newver} &7was found on Spigot (your version: &c{oldver}&7). Please update me! <3 - Link: {link}"
   command-data-not-loaded: "&4Your quests progress file has not been loaded; you cannot use quests. If this issue persists, contact an admin."
   command-sub-doesntexist: "&7The specified subcommand '&c{sub}' &7does not exist."

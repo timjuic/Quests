@@ -208,6 +208,7 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
     private QItemStackRegistry qItemStackRegistry;
     private QuestItemRegistry questItemRegistry;
     private MenuController menuController;
+    private com.leonardobishop.quests.bukkit.battlepass.BattlePassRewardDispatcher battlePassRewardDispatcher;
     private AbstractPlaceholderAPIHook placeholderAPIHook;
     private AbstractCMIHook cmiHook;
     private AbstractCoreProtectHook coreProtectHook;
@@ -372,6 +373,7 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         this.taskTypeManager = new BukkitTaskTypeManager(this, new HashSet<>(questsConfig.getStringList("options.task-type-exclusions")));
         this.qPlayerManager = new QPlayerManager(this, storageProvider, questController);
         this.menuController = new MenuController(this);
+        this.battlePassRewardDispatcher = new com.leonardobishop.quests.bukkit.battlepass.BattlePassRewardDispatcher(this);
         this.questItemRegistry = new QuestItemRegistry();
         this.qItemStackRegistry = new QItemStackRegistry();
         this.questCompleter = new BukkitQuestCompleter(this);
@@ -960,6 +962,10 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
 
     public MenuController getMenuController() {
         return menuController;
+    }
+
+    public com.leonardobishop.quests.bukkit.battlepass.BattlePassRewardDispatcher getBattlePassRewardDispatcher() {
+        return battlePassRewardDispatcher;
     }
 
     @NotNull

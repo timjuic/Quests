@@ -26,6 +26,10 @@ public class Quest implements Comparable<Quest> {
     private List<String> cancelCommands;
     private List<String> expiryCommands;
     private String vaultReward;
+    private int tier;
+    private List<String> premiumRewards;
+    private List<String> premiumRewardString;
+    private String premiumVaultReward;
     private boolean repeatEnabled;
     private boolean cooldownEnabled;
     private int cooldown;
@@ -226,6 +230,44 @@ public class Quest implements Comparable<Quest> {
     }
 
     /**
+     * Get the battle pass tier this quest belongs to.
+     * Tier 0 means the quest is not part of the battle pass and follows legacy behavior.
+     *
+     * @return tier number (0 = not in battle pass, 1+ = battle pass tier)
+     */
+    public int getTier() {
+        return this.tier;
+    }
+
+    /**
+     * Get the premium rewards for this quest, claimable only by players with the premium permission.
+     * Returned in addition to (not instead of) the regular rewards.
+     *
+     * @return immutable list of premium reward commands
+     */
+    public @NotNull List<String> getPremiumRewards() {
+        return Collections.unmodifiableList(premiumRewards);
+    }
+
+    /**
+     * Get the premium reward chat string of the quest.
+     *
+     * @return immutable list of messages to send when premium reward is claimed
+     */
+    public @NotNull List<String> getPremiumRewardString() {
+        return Collections.unmodifiableList(premiumRewardString);
+    }
+
+    /**
+     * Get the premium Vault reward for this quest.
+     *
+     * @return string, or null if no premium vault reward
+     */
+    public @Nullable String getPremiumVaultReward() {
+        return this.premiumVaultReward;
+    }
+
+    /**
      * Get if this quest can be repeated after completion.
      *
      * @return boolean
@@ -381,6 +423,10 @@ public class Quest implements Comparable<Quest> {
         private List<String> cancelCommands = Collections.emptyList();
         private List<String> expiryCommands = Collections.emptyList();
         private String vaultReward = null;
+        private int tier = 0;
+        private List<String> premiumRewards = Collections.emptyList();
+        private List<String> premiumRewardString = Collections.emptyList();
+        private String premiumVaultReward = null;
         private boolean repeatEnabled = false;
         private boolean cooldownEnabled = false;
         private int cooldown = 0;
@@ -448,6 +494,26 @@ public class Quest implements Comparable<Quest> {
 
         public Builder withVaultReward(String vaultReward) {
             this.vaultReward = vaultReward;
+            return this;
+        }
+
+        public Builder withTier(int tier) {
+            this.tier = tier;
+            return this;
+        }
+
+        public Builder withPremiumRewards(List<String> premiumRewards) {
+            this.premiumRewards = premiumRewards;
+            return this;
+        }
+
+        public Builder withPremiumRewardString(List<String> premiumRewardString) {
+            this.premiumRewardString = premiumRewardString;
+            return this;
+        }
+
+        public Builder withPremiumVaultReward(String premiumVaultReward) {
+            this.premiumVaultReward = premiumVaultReward;
             return this;
         }
 
@@ -539,6 +605,10 @@ public class Quest implements Comparable<Quest> {
             quest.cancelCommands = this.cancelCommands;
             quest.expiryCommands = this.expiryCommands;
             quest.vaultReward = this.vaultReward;
+            quest.tier = this.tier;
+            quest.premiumRewards = this.premiumRewards;
+            quest.premiumRewardString = this.premiumRewardString;
+            quest.premiumVaultReward = this.premiumVaultReward;
             quest.repeatEnabled = this.repeatEnabled;
             quest.cooldownEnabled = this.cooldownEnabled;
             quest.cooldown = this.cooldown;

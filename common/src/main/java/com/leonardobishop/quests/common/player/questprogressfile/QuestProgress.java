@@ -24,6 +24,8 @@ public final class QuestProgress {
     private boolean completed;
     private boolean completedBefore;
     private long completionDate;
+    private boolean freeRewardClaimed;
+    private boolean premiumRewardClaimed;
     private boolean modified;
 
     /**
@@ -40,6 +42,13 @@ public final class QuestProgress {
      * @param modified        whether the object has been modified and needs to be saved
      */
     public QuestProgress(final Quests plugin, final String questId, final UUID playerUUID, final boolean started, final long startedDate, final boolean completed, final boolean completedBefore, final long completionDate, final boolean modified) {
+        this(plugin, questId, playerUUID, started, startedDate, completed, completedBefore, completionDate, false, false, modified);
+    }
+
+    /**
+     * Constructs a QuestProgress with battle pass claim flags.
+     */
+    public QuestProgress(final Quests plugin, final String questId, final UUID playerUUID, final boolean started, final long startedDate, final boolean completed, final boolean completedBefore, final long completionDate, final boolean freeRewardClaimed, final boolean premiumRewardClaimed, final boolean modified) {
         this.plugin = plugin;
         this.questId = questId;
         this.playerUUID = playerUUID;
@@ -49,6 +58,8 @@ public final class QuestProgress {
         this.completed = completed;
         this.completedBefore = completedBefore;
         this.completionDate = completionDate;
+        this.freeRewardClaimed = freeRewardClaimed;
+        this.premiumRewardClaimed = premiumRewardClaimed;
         this.modified = modified;
     }
 
@@ -65,7 +76,14 @@ public final class QuestProgress {
      * @param completionDate  the date of the last quest completion
      */
     public QuestProgress(final Quests plugin, final String questId, final UUID playerUUID, final boolean started, final long startedDate, final boolean completed, final boolean completedBefore, final long completionDate) {
-        this(plugin, questId, playerUUID, started, startedDate, completed, completedBefore, completionDate, false);
+        this(plugin, questId, playerUUID, started, startedDate, completed, completedBefore, completionDate, false, false, false);
+    }
+
+    /**
+     * Constructs a QuestProgress with battle pass claim flags and {@link QuestProgress#modified} set to {@code false}.
+     */
+    public QuestProgress(final Quests plugin, final String questId, final UUID playerUUID, final boolean started, final long startedDate, final boolean completed, final boolean completedBefore, final long completionDate, final boolean freeRewardClaimed, final boolean premiumRewardClaimed) {
+        this(plugin, questId, playerUUID, started, startedDate, completed, completedBefore, completionDate, freeRewardClaimed, premiumRewardClaimed, false);
     }
 
     /**
@@ -90,6 +108,8 @@ public final class QuestProgress {
         this.completed = questProgress.completed;
         this.completedBefore = questProgress.completedBefore;
         this.completionDate = questProgress.completionDate;
+        this.freeRewardClaimed = questProgress.freeRewardClaimed;
+        this.premiumRewardClaimed = questProgress.premiumRewardClaimed;
         this.modified = questProgress.modified;
     }
 
@@ -241,6 +261,38 @@ public final class QuestProgress {
     }
 
     /**
+     * @return whether the player has claimed the free reward for this quest
+     */
+    @Contract(pure = true)
+    public boolean isFreeRewardClaimed() {
+        return this.freeRewardClaimed;
+    }
+
+    /**
+     * @param freeRewardClaimed whether the player has claimed the free reward for this quest
+     */
+    public void setFreeRewardClaimed(final boolean freeRewardClaimed) {
+        this.freeRewardClaimed = freeRewardClaimed;
+        this.modified = true;
+    }
+
+    /**
+     * @return whether the player has claimed the premium reward for this quest
+     */
+    @Contract(pure = true)
+    public boolean isPremiumRewardClaimed() {
+        return this.premiumRewardClaimed;
+    }
+
+    /**
+     * @param premiumRewardClaimed whether the player has claimed the premium reward for this quest
+     */
+    public void setPremiumRewardClaimed(final boolean premiumRewardClaimed) {
+        this.premiumRewardClaimed = premiumRewardClaimed;
+        this.modified = true;
+    }
+
+    /**
      * @return whether the object has been modified and needs to be saved
      */
     @Contract(pure = true)
@@ -286,7 +338,8 @@ public final class QuestProgress {
      */
     @Contract(pure = true)
     public boolean hasNonDefaultValues() {
-        if (this.started || this.startedDate != 0L || this.completed || this.completedBefore || this.completionDate != 0L) {
+        if (this.started || this.startedDate != 0L || this.completed || this.completedBefore || this.completionDate != 0L
+                || this.freeRewardClaimed || this.premiumRewardClaimed) {
             return true;
         }
 

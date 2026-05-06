@@ -1,6 +1,8 @@
 package com.leonardobishop.quests.bukkit.questcontroller;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
+import com.leonardobishop.quests.bukkit.battlepass.BattlePassConfig;
+import com.leonardobishop.quests.bukkit.battlepass.BattlePassTiers;
 import com.leonardobishop.quests.bukkit.api.event.PlayerCancelQuestEvent;
 import com.leonardobishop.quests.bukkit.api.event.PlayerExpireQuestEvent;
 import com.leonardobishop.quests.bukkit.api.event.PlayerFinishQuestEvent;
@@ -183,6 +185,12 @@ public class NormalQuestController implements QuestController {
             return QuestStartResult.QUEST_LOCKED;
         }
 
+        if (BattlePassConfig.isEnabled(this.config)
+                && BattlePassConfig.isBattlePassQuest(quest)
+                && !BattlePassTiers.isTierUnlocked(this.plugin, qPlayer, quest.getTier())) {
+            return QuestStartResult.QUEST_LOCKED;
+        }
+
         final Player player = Bukkit.getPlayer(qPlayer.getPlayerUUID());
         final String questPermission = quest.getPermission();
 
@@ -244,6 +252,16 @@ public class NormalQuestController implements QuestController {
         questProgress.setCompleted(true);
         questProgress.setCompletedBefore(true);
         questProgress.setCompletionDate(System.currentTimeMillis());
+
+        // Battle pass: defer reward delivery to manual claim. Setting both flags to false marks the
+        // rewards as pending. Premium permission is checked at claim time, not here, which is what
+        // gives players the backfill behavior when they buy premium after completing tier quests.
+        boolean deferRewards = BattlePassConfig.isEnabled(this.config) && BattlePassConfig.isBattlePassQuest(quest);
+        if (deferRewards) {
+            questProgress.setFreeRewardClaimed(false);
+            questProgress.setPremiumRewardClaimed(false);
+        }
+
         Player player = Bukkit.getPlayer(qPlayer.getPlayerUUID());
         if (player != null) {
             QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(quest);
@@ -254,18 +272,20 @@ public class NormalQuestController implements QuestController {
             PlayerFinishQuestEvent questFinishEvent = new PlayerFinishQuestEvent(player, qPlayer, questProgress, questFinishMessage);
             Bukkit.getPluginManager().callEvent(questFinishEvent);
             // PlayerFinishQuestEvent -- end
-            plugin.getScheduler().doSync(() -> {
-                final VaultReward vaultReward = this.vaultRewardCache.computeIfAbsent(quest,
-                        k -> VaultReward.parse(this.plugin, k.getVaultReward())
-                );
+            if (!deferRewards) {
+                plugin.getScheduler().doSync(() -> {
+                    final VaultReward vaultReward = this.vaultRewardCache.computeIfAbsent(quest,
+                            k -> VaultReward.parse(this.plugin, k.getVaultReward())
+                    );
 
-                // Use cached reward to do not parse it every single time
-                vaultReward.give(player);
+                    // Use cached reward to do not parse it every single time
+                    vaultReward.give(player);
 
-                for (String s : quest.getRewards()) {
-                    DispatchUtils.dispatchCommand(player, this.plugin.applyPlayerAndPAPI(BukkitQuestsPlugin.PAPIType.QUESTS, player, s));
-                }
-            });
+                    for (String s : quest.getRewards()) {
+                        DispatchUtils.dispatchCommand(player, this.plugin.applyPlayerAndPAPI(BukkitQuestsPlugin.PAPIType.QUESTS, player, s));
+                    }
+                });
+            }
             Messages.send(questFinishEvent.getQuestFinishMessage(), player);
             if (config.getBoolean("options.titles-enabled")) {
                 this.plugin.getTitleHandle().sendTitle(player,
@@ -273,8 +293,15 @@ public class NormalQuestController implements QuestController {
                         this.plugin.applyPlayerAndPAPI(BukkitQuestsPlugin.PAPIType.QUESTS, player, Messages.TITLE_QUEST_COMPLETE_SUBTITLE.getMessageLegacyColor().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName))
                 );
             }
-            for (String s : quest.getRewardString()) {
-                Chat.send(player, this.plugin.applyPlayerAndPAPI(BukkitQuestsPlugin.PAPIType.QUESTS, player, s), true);
+            if (deferRewards) {
+                String pendingMsg = Messages.BATTLEPASS_REWARDS_PENDING.getMessage();
+                if (pendingMsg != null && !pendingMsg.isEmpty()) {
+                    Chat.send(player, this.plugin.applyPlayerAndPAPI(BukkitQuestsPlugin.PAPIType.QUESTS, player, pendingMsg.replace("{quest}", displayNameStripped).replace("{questcolored}", displayName)), true);
+                }
+            } else {
+                for (String s : quest.getRewardString()) {
+                    Chat.send(player, this.plugin.applyPlayerAndPAPI(BukkitQuestsPlugin.PAPIType.QUESTS, player, s), true);
+                }
             }
             SoundUtils.playSoundForPlayer(player, plugin.getQuestsConfig().getString("options.sounds.quest-complete"));
         }

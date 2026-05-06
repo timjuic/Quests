@@ -41,13 +41,15 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
     // Table creation SQL
     private static final String CREATE_TABLE_QUEST_PROGRESS =
             "CREATE TABLE IF NOT EXISTS `{prefix}quest_progress` (" +
-                    " `uuid`              VARCHAR(36)  NOT NULL," +
-                    " `quest_id`          VARCHAR(50)  NOT NULL," +
-                    " `started`           BOOL         NOT NULL," +
-                    " `started_date`      BIGINT       NOT NULL," +
-                    " `completed`         BOOL         NOT NULL," +
-                    " `completed_before`  BOOL         NOT NULL," +
-                    " `completion_date`   BIGINT       NOT NULL," +
+                    " `uuid`                    VARCHAR(36)  NOT NULL," +
+                    " `quest_id`                VARCHAR(50)  NOT NULL," +
+                    " `started`                 BOOL         NOT NULL," +
+                    " `started_date`            BIGINT       NOT NULL," +
+                    " `completed`               BOOL         NOT NULL," +
+                    " `completed_before`        BOOL         NOT NULL," +
+                    " `completion_date`         BIGINT       NOT NULL," +
+                    " `free_reward_claimed`     BOOL         NOT NULL DEFAULT FALSE," +
+                    " `premium_reward_claimed`  BOOL         NOT NULL DEFAULT FALSE," +
                     " PRIMARY KEY (`uuid`, `quest_id`));";
     private static final String CREATE_TABLE_TASK_PROGRESS =
             "CREATE TABLE IF NOT EXISTS `{prefix}task_progress` (" +
@@ -73,7 +75,7 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
 
     // Selection SQL
     private static final String SELECT_PLAYER_QUEST_PROGRESS =
-            "SELECT quest_id, started, started_date, completed, completed_before, completion_date FROM `{prefix}quest_progress` WHERE uuid = ?;";
+            "SELECT quest_id, started, started_date, completed, completed_before, completion_date, free_reward_claimed, premium_reward_claimed FROM `{prefix}quest_progress` WHERE uuid = ?;";
     private static final String SELECT_PLAYER_TASK_PROGRESS =
             "SELECT quest_id, task_id, completed, progress, data_type FROM `{prefix}task_progress` WHERE uuid = ?;";
     private static final String SELECT_UUID_LIST =
@@ -81,7 +83,7 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
 
     // Insertion SQL
     private static final String INSERT_PLAYER_QUEST_PROGRESS =
-            "INSERT INTO `{prefix}quest_progress` (uuid, quest_id, started, started_date, completed, completed_before, completion_date) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE started = ?, started_date = ?, completed = ?, completed_before = ?, completion_date = ?";
+            "INSERT INTO `{prefix}quest_progress` (uuid, quest_id, started, started_date, completed, completed_before, completion_date, free_reward_claimed, premium_reward_claimed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE started = ?, started_date = ?, completed = ?, completed_before = ?, completion_date = ?, free_reward_claimed = ?, premium_reward_claimed = ?";
     private static final String INSERT_PLAYER_TASK_PROGRESS =
             "INSERT INTO `{prefix}task_progress` (uuid, quest_id, task_id, completed, progress, data_type) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE completed = ?, progress = ?, data_type = ?";
 
@@ -250,8 +252,10 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
                         final boolean completed = rs.getBoolean(4);
                         final boolean completedBefore = rs.getBoolean(5);
                         final long completionDate = rs.getLong(6);
+                        final boolean freeRewardClaimed = rs.getBoolean(7);
+                        final boolean premiumRewardClaimed = rs.getBoolean(8);
 
-                        final QuestProgress questProgress = new QuestProgress(this.plugin, questId, uuid, started, startedDate, completed, completedBefore, completionDate);
+                        final QuestProgress questProgress = new QuestProgress(this.plugin, questId, uuid, started, startedDate, completed, completedBefore, completionDate, freeRewardClaimed, premiumRewardClaimed);
                         questProgressMap.put(questId, questProgress);
                     }
                 }
@@ -365,11 +369,15 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
                 questStmt.setBoolean(5, questProgress.isCompleted());
                 questStmt.setBoolean(6, questProgress.isCompletedBefore());
                 questStmt.setLong(7, questProgress.getCompletionDate());
-                questStmt.setBoolean(8, questProgress.isStarted());
-                questStmt.setLong(9, questProgress.getStartedDate());
-                questStmt.setBoolean(10, questProgress.isCompleted());
-                questStmt.setBoolean(11, questProgress.isCompletedBefore());
-                questStmt.setLong(12, questProgress.getCompletionDate());
+                questStmt.setBoolean(8, questProgress.isFreeRewardClaimed());
+                questStmt.setBoolean(9, questProgress.isPremiumRewardClaimed());
+                questStmt.setBoolean(10, questProgress.isStarted());
+                questStmt.setLong(11, questProgress.getStartedDate());
+                questStmt.setBoolean(12, questProgress.isCompleted());
+                questStmt.setBoolean(13, questProgress.isCompletedBefore());
+                questStmt.setLong(14, questProgress.getCompletionDate());
+                questStmt.setBoolean(15, questProgress.isFreeRewardClaimed());
+                questStmt.setBoolean(16, questProgress.isPremiumRewardClaimed());
                 questStmt.addBatch();
 
                 for (final TaskProgress taskProgress : questProgress.getTaskProgresses()) {
@@ -517,9 +525,19 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
         private static final String UPDATE_DATABASE_INFORMATION =
                 "INSERT INTO `{prefix}database_information` (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?;";
 
-        private static final int LATEST_SCHEMA_VERSION = 2;
-        private static final Map<Integer, String> MIGRATION_STATEMENTS = new HashMap<>() {{
-            this.put(1, "ALTER TABLE `{prefix}quest_progress` ADD COLUMN `started_date` BIGINT NOT NULL AFTER `started`;");
+        private static final int LATEST_SCHEMA_VERSION = 3;
+        private static final Map<Integer, String[]> MIGRATION_STATEMENTS = new HashMap<>() {{
+            this.put(1, new String[] {
+                    "ALTER TABLE `{prefix}quest_progress` ADD COLUMN `started_date` BIGINT NOT NULL AFTER `started`;"
+            });
+            // Add battle pass claim flags. Existing completed quests are marked as already-claimed so the
+            // upgrade does not retroactively flood players with unclaimed rewards on quests they finished
+            // before the battle pass system existed.
+            this.put(2, new String[] {
+                    "ALTER TABLE `{prefix}quest_progress` ADD COLUMN `free_reward_claimed` BOOL NOT NULL DEFAULT FALSE AFTER `completion_date`;",
+                    "ALTER TABLE `{prefix}quest_progress` ADD COLUMN `premium_reward_claimed` BOOL NOT NULL DEFAULT FALSE AFTER `free_reward_claimed`;",
+                    "UPDATE `{prefix}quest_progress` SET `free_reward_claimed` = `completed_before`, `premium_reward_claimed` = `completed_before`;"
+            });
         }};
 
         private DatabaseMigrator(final @NotNull BukkitQuestsPlugin plugin, final @NotNull Function<String, String> prefixer, final @NotNull Connection conn) {
@@ -577,13 +595,17 @@ public final class ModernMySQLStorageProvider implements StorageProvider {
             this.plugin.getQuestsLogger().debug("Starting upgrade from version " + initialSchemaVersion + " to " + LATEST_SCHEMA_VERSION + ".");
 
             for (int i = initialSchemaVersion; i < LATEST_SCHEMA_VERSION; i++) {
-                final String statementString = this.prefixer.apply(MIGRATION_STATEMENTS.get(i));
-                this.plugin.getQuestsLogger().debug("Running migration statement: " + statementString + ".");
+                final String[] statements = MIGRATION_STATEMENTS.get(i);
 
+                String currentStatement = null;
                 try (final Statement stmt = this.conn.createStatement()) {
-                    stmt.execute(statementString);
+                    for (final String raw : statements) {
+                        currentStatement = this.prefixer.apply(raw);
+                        this.plugin.getQuestsLogger().debug("Running migration statement: " + currentStatement + ".");
+                        stmt.execute(currentStatement);
+                    }
                 } catch (final SQLException e) {
-                    this.plugin.getLogger().severe("Failed to run migration statement (" + i + " -> " + (i + 1) + "): " + statementString + ".");
+                    this.plugin.getLogger().severe("Failed to run migration statement (" + i + " -> " + (i + 1) + "): " + currentStatement + ".");
                     this.plugin.getLogger().severe("Quests will attempt to save current migration progress to prevent database corruption, but may not be able to do so.");
                     this.updateSchemaVersion(i);
 

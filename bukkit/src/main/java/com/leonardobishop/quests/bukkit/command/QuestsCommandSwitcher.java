@@ -31,10 +31,12 @@ public class QuestsCommandSwitcher extends CommandSwitcher implements TabExecuto
         super.subcommands.put("start", new StartCommandHandler(plugin));
         super.subcommands.put("track", new TrackCommandHandler(plugin));
         super.subcommands.put("cancel", new CancelCommandHandler(plugin));
+        super.subcommands.put("battlepass", new BattlePassCommandHandler(plugin));
 
         super.aliases.put("q", "quest");
         super.aliases.put("c", "category");
         super.aliases.put("a", "admin");
+        super.aliases.put("bp", "battlepass");
     }
 
     @Override
@@ -103,6 +105,9 @@ public class QuestsCommandSwitcher extends CommandSwitcher implements TabExecuto
         }
         if (sender.hasPermission(subcommands.get("random").getPermission())) {
             sender.sendMessage(ChatColor.DARK_GRAY + " * " + ChatColor.RED + "/quests random " + ChatColor.DARK_GRAY + ": show random quests");
+        }
+        if (sender.hasPermission(subcommands.get("battlepass").getPermission())) {
+            sender.sendMessage(ChatColor.DARK_GRAY + " * " + ChatColor.RED + "/quests bp/battlepass " + ChatColor.DARK_GRAY + ": open the battle pass");
         }
         if (sender.hasPermission(subcommands.get("admin").getPermission())) {
             sender.sendMessage(ChatColor.DARK_GRAY + " * " + ChatColor.RED + "/quests a/admin " + ChatColor.DARK_GRAY + ": view help for admins");

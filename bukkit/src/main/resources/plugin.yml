@@ -76,6 +76,12 @@ permissions:
   quests.command.random:
     description: Permission to execute /q random
     default: op
+  quests.command.battlepass:
+    description: Permission to execute /q battlepass
+    default: true
+  quests.premium:
+    description: Grants access to premium battle pass rewards
+    default: false
   quests.admin:
     description: Permission for the admin commands
     default: op

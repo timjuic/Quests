@@ -1,6 +1,7 @@
 package com.leonardobishop.quests.bukkit.menu;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
+import com.leonardobishop.quests.bukkit.battlepass.BattlePassConfig;
 import com.leonardobishop.quests.bukkit.config.BukkitQuestsConfig;
 import com.leonardobishop.quests.bukkit.menu.element.BackMenuElement;
 import com.leonardobishop.quests.bukkit.menu.element.MenuElement;
@@ -40,7 +41,20 @@ public class QuestQMenu extends PaginatedQMenu {
             if (config.getBoolean("options.gui-hide-locked")) {
                 QuestProgress questProgress = owner.getQuestProgressFile().getQuestProgress(quest);
                 long cooldown = owner.getQuestProgressFile().getCooldownFor(quest);
-                if (!owner.getQuestProgressFile().hasMetRequirements(quest) || (!quest.isRepeatable() && questProgress.isCompletedBefore()) || cooldown > 0) {
+                boolean completedNotRepeatable = !quest.isRepeatable() && questProgress.isCompletedBefore();
+                // Don't hide a battle-pass quest that the player still needs to claim from. Once
+                // both rewards are claimed (or no premium reward exists / player has no perm),
+                // the regular hide-completed behavior resumes.
+                boolean hasPendingClaim = BattlePassConfig.isEnabled(config)
+                        && BattlePassConfig.isBattlePassQuest(quest)
+                        && completedNotRepeatable
+                        && (!questProgress.isFreeRewardClaimed()
+                            || (!quest.getPremiumRewards().isEmpty() && !questProgress.isPremiumRewardClaimed()
+                                && Bukkit.getPlayer(owner.getPlayerUUID()) != null
+                                && Bukkit.getPlayer(owner.getPlayerUUID()).hasPermission(BattlePassConfig.getPremiumPermission(config))));
+                if (!owner.getQuestProgressFile().hasMetRequirements(quest)
+                        || (completedNotRepeatable && !hasPendingClaim)
+                        || cooldown > 0) {
                     continue;
                 }
             }

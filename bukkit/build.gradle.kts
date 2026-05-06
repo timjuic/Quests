@@ -168,6 +168,7 @@ dependencies {
 }
 
 tasks.shadowJar {
+    archiveBaseName.set("Quests")
     exclude("mojang-translations/*")
 
     relocate("org.bstats", "com.leonardobishop.quests.libs.bstats")

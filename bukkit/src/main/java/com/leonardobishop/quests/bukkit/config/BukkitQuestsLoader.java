@@ -270,6 +270,10 @@ public class BukkitQuestsLoader implements QuestsLoader {
                     if (!error && !questsConfig.getBoolean("options.error-checking.override-errors", false)) {
                         QItemStack displayItem = getQItemStack("display", config);
                         List<String> rewards = config.getStringList("rewards");
+                        List<String> premiumRewards = config.getStringList("premium-rewards");
+                        List<String> premiumRewardString = config.getStringList("premium-rewardstring");
+                        String premiumVaultReward = config.getString("premium-vaultreward", null);
+                        int tier = config.getInt("options.tier", 0);
                         List<String> requirements = config.getStringList("options.requires");
                         List<String> rewardString = config.getStringList("rewardstring");
                         List<String> startString = config.getStringList("startstring");
@@ -316,6 +320,10 @@ public class BukkitQuestsLoader implements QuestsLoader {
                                 .withCancelCommands(cancelCommands)
                                 .withExpiryCommands(expiryCommands)
                                 .withVaultReward(vaultReward)
+                                .withTier(tier)
+                                .withPremiumRewards(premiumRewards)
+                                .withPremiumRewardString(premiumRewardString)
+                                .withPremiumVaultReward(premiumVaultReward)
                                 .withPlaceholders(placeholders)
                                 .withProgressPlaceholders(progressPlaceholders)
                                 .withCooldown(cooldownTime)

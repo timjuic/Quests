@@ -23,6 +23,6 @@ public abstract class QMenu {
         return menuElements.get(slot);
     }
 
-    abstract Inventory draw();
+    public abstract Inventory draw();
 
 }

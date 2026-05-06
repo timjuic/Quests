@@ -109,8 +109,12 @@ public final class ModernYAMLStorageProvider implements StorageProvider {
                         final boolean qCompleted = questSection.getBoolean("completed", false);
                         final boolean qCompletedBefore = questSection.getBoolean("completed-before", false);
                         final long qCompletionDate = questSection.getLong("completion-date", 0L);
+                        // Existing completed quests with no claim record default to claimed (no retroactive flood).
+                        // New completions written by the battle pass code path will set these explicitly.
+                        final boolean qFreeRewardClaimed = questSection.getBoolean("free-reward-claimed", qCompletedBefore);
+                        final boolean qPremiumRewardClaimed = questSection.getBoolean("premium-reward-claimed", qCompletedBefore);
 
-                        final QuestProgress questProgress = new QuestProgress(this.plugin, questId, uuid, qStarted, qStartedDate, qCompleted, qCompletedBefore, qCompletionDate);
+                        final QuestProgress questProgress = new QuestProgress(this.plugin, questId, uuid, qStarted, qStartedDate, qCompleted, qCompletedBefore, qCompletionDate, qFreeRewardClaimed, qPremiumRewardClaimed);
 
                         final ConfigurationSection taskProgressSection = questSection.getConfigurationSection("task-progress");
 
@@ -192,6 +196,8 @@ public final class ModernYAMLStorageProvider implements StorageProvider {
                 data.set("quest-progress." + questId + ".completed", questProgress.isCompleted());
                 data.set("quest-progress." + questId + ".completed-before", questProgress.isCompletedBefore());
                 data.set("quest-progress." + questId + ".completion-date", questProgress.getCompletionDate());
+                data.set("quest-progress." + questId + ".free-reward-claimed", questProgress.isFreeRewardClaimed());
+                data.set("quest-progress." + questId + ".premium-reward-claimed", questProgress.isPremiumRewardClaimed());
 
                 for (final TaskProgress taskProgress : questProgress.getTaskProgresses()) {
                     final String taskId = taskProgress.getTaskId();

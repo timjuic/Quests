@@ -52,15 +52,24 @@ tasks.register<Jar>("allJar") {
         }
     }
 
-    subprojects {
-        configurations.archives {
-            allArtifacts.files.forEach {
-                from(zipTree(it))
+    archiveBaseName = "Quests"
+}
+
+// Wire shadowJar (or fallback jar) outputs from each subproject into allJar after subprojects
+// finish configuring. Shadow v9 stopped auto-registering shadowJar into the `archives`
+// configuration, so we have to source it explicitly to keep relocated deps in the final artifact.
+val rootTasks = tasks
+subprojects.forEach { sub ->
+    sub.afterEvaluate {
+        val shadowJarTask = sub.tasks.findByName("shadowJar") as? Jar
+        val sourceTask = shadowJarTask ?: (sub.tasks.findByName("jar") as? Jar)
+        if (sourceTask != null) {
+            rootTasks.named<Jar>("allJar") {
+                dependsOn(sourceTask)
+                from(zipTree(sourceTask.archiveFile))
             }
         }
     }
-
-    archiveBaseName = "Quests"
 }
 
 fun gitCommitHash(): String {
